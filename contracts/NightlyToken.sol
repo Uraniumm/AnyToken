@@ -3,7 +3,7 @@ pragma solidity ^0.8.10;
 
 import "./DividendDistributor.sol";
 
-contract Token is IERC20, Ownable, Manageable {
+contract NightlyToken is IERC20, Ownable, Manageable {
     //using SafeMath for uint256;
 
     //address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
@@ -68,13 +68,13 @@ contract Token is IERC20, Ownable, Manageable {
 
     event RouterSet(address indexed router);
 
-    constructor () {
-        _router = IDEXRouter(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
+    constructor (address router) {
+        _router = IDEXRouter(router);
         _pair = IDEXFactory(_router.factory()).createPair(WBNB, address(this));
         _allowances[address(this)][address(_router)] = type(uint256).max;
         _allowances[owner()][address(_router)] = type(uint256).max;
         
-        distributor = new DividendDistributor(address(_router));
+        distributor = new DividendDistributor(address(_router), address(this));
 
         isFeeExempt[msg.sender] = true;
         isTxLimitExempt[msg.sender] = true;

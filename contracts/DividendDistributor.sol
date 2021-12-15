@@ -279,11 +279,11 @@ contract DividendDistributor is IDividendDistributor {
         require(msg.sender == _token); _;
     }
 
-    constructor (address _router) {
+    constructor (address _router, address token) {
         router = _router != address(0)
             ? IDEXRouter(_router)
             : IDEXRouter(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
-        _token = msg.sender;
+        _token = token;
         addRewardToken(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
     }
 
