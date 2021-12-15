@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.10;
 
-import "./Imports.sol";
+import "./DividendDistributor.sol";
 
-contract NightlyToken  is IERC20, Ownable, Manageable {
+contract Token is IERC20, Ownable, Manageable {
     //using SafeMath for uint256;
 
     //address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
@@ -11,8 +11,8 @@ contract NightlyToken  is IERC20, Ownable, Manageable {
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
 
-    string constant _name = "BleedingEdge-6";
-    string constant _symbol = "BTA6";
+    string constant _name = "Token";
+    string constant _symbol = "TKN";
     uint8 constant _decimals = 9;
 
     uint16 internal constant permille = 10**3;
