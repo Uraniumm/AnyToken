@@ -107,3 +107,4 @@ bin/*
 build/*
 contracts/artifacts/*
 Pancakeswap/artifacts/*
+.vscode/settings.json
