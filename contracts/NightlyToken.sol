@@ -7,7 +7,7 @@ contract NightlyToken is IERC20, Ownable, Manageable {
     //using SafeMath for uint256;
 
     //address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
-    address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+    address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
 
@@ -84,7 +84,7 @@ contract NightlyToken is IERC20, Ownable, Manageable {
         isDividendExempt[DEAD] = true;
         isDividendExempt[ZERO] = true;
         //autoLiquidityReceiver = owner();
-        marketingFeeReceiver = address(0xE547f3Baa9E01484Cde3760ca3B675d454ab86DD);
+        marketingFeeReceiver = address(0x0EF874ddd70539615564f3cd82a1bB9cE94AA593);
 
 
         _balances[msg.sender] = _totalSupply;

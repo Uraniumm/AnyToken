@@ -64,50 +64,6 @@ abstract contract Context {
     }
 }
 
-
-/**
- * Standard SafeMath, stripped down to just add/sub/mul/div
-
-library SafeMath {
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, "SafeMath: subtraction overflow");
-    }
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b <= a, errorMessage);
-        uint256 c = a - b;
-
-        return c;
-    }
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
-        return c;
-    }
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "SafeMath: division by zero");
-    }
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        // Solidity only automatically asserts when dividing by 0
-        require(b > 0, errorMessage);
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-
-        return c;
-    }
-}
- */
-
 interface IERC20 {
 
     function totalSupply() external view returns (uint256);
@@ -244,8 +200,8 @@ contract DividendDistributor is IDividendDistributor {
         uint256 rewardType;
     }
 
-    // IERC20 BUSD = IERC20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
-    address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+    // IERC20 BUSD = IERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+    address WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     IDEXRouter router;
 
     address[] shareholders;
@@ -282,9 +238,9 @@ contract DividendDistributor is IDividendDistributor {
     constructor (address _router, address token) {
         router = _router != address(0)
             ? IDEXRouter(_router)
-            : IDEXRouter(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
+            : IDEXRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E);
         _token = token;
-        addRewardToken(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
+        addRewardToken(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
     }
 
     function setDistributionCriteria(uint256 _minPeriod, uint256 _minDistribution) external override onlyToken {
