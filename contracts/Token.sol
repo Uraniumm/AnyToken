@@ -7,7 +7,7 @@ import "./IDEXFactory.sol";
 import "./DividendDistributor.sol";
 
 contract Token is IBEP20, Auth {
-    using SafeMath for uint256;
+    //using SafeMath for uint256;
 
     uint256 public constant MASK = type(uint128).max;
     address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
@@ -126,7 +126,8 @@ contract Token is IBEP20, Auth {
 
     function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
         if(_allowances[sender][msg.sender] != _totalSupply){
-            _allowances[sender][msg.sender] = _allowances[sender][msg.sender].sub(amount, "Insufficient Allowance");
+            require(_allowances[sender][msg.sender] >= amount, "Insufficient Allowance");
+            unchecked { _allowances[sender][msg.sender] -= amount; }
         }
 
         return _transferFrom(sender, recipient, amount);
@@ -142,11 +143,12 @@ contract Token is IBEP20, Auth {
 
         //        if(!launched() && recipient == pair){ require(_balances[sender] > 0); launch(); }
 
-        _balances[sender] = _balances[sender].sub(amount, "Insufficient Balance");
+        require(_balances[sender] >= amount, "Insufficient Balance");
+        unchecked { _balances[sender] -= amount; }
 
         uint256 amountReceived = shouldTakeFee(sender) ? takeFee(sender, recipient, amount) : amount;
 
-        _balances[recipient] = _balances[recipient].add(amountReceived);
+        _balances[recipient] += amountReceived;
 
         if(!isDividendExempt[sender]){ try distributor.setShare(sender, _balances[sender]) {} catch {} }
         if(!isDividendExempt[recipient]){ try distributor.setShare(recipient, _balances[recipient]) {} catch {} }
@@ -158,8 +160,9 @@ contract Token is IBEP20, Auth {
     }
 
     function _basicTransfer(address sender, address recipient, uint256 amount) internal returns (bool) {
-        _balances[sender] = _balances[sender].sub(amount, "Insufficient Balance");
-        _balances[recipient] = _balances[recipient].add(amount);
+        require(_balances[sender] >= amount, "Insufficient Balance");
+        unchecked { _balances[sender] -= amount; }
+        _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
         return true;
     }
@@ -175,29 +178,29 @@ contract Token is IBEP20, Auth {
     }
 
     function getTotalFee(bool selling) public view returns (uint256) {
-        if(launchedAt + 1 >= block.number){ return feeDenominator.sub(1); }
+        if(launchedAt + 1 >= block.number){ return feeDenominator - 1; }
         if(selling){ return getMultipliedFee(); }
         return totalFee;
     }
 
     function getMultipliedFee() public view returns (uint256) {
         if (launchedAtTimestamp + 1 days > block.timestamp) {
-            return totalFee.mul(18000).div(feeDenominator);
-        } else if (buybackMultiplierTriggeredAt.add(buybackMultiplierLength) > block.timestamp) {
-            uint256 remainingTime = buybackMultiplierTriggeredAt.add(buybackMultiplierLength).sub(block.timestamp);
-            uint256 feeIncrease = totalFee.mul(buybackMultiplierNumerator).div(buybackMultiplierDenominator).sub(totalFee);
-            return totalFee.add(feeIncrease.mul(remainingTime).div(buybackMultiplierLength));
+            return (totalFee * 18000) / feeDenominator;
+        } else if (buybackMultiplierTriggeredAt + buybackMultiplierLength > block.timestamp) {
+            uint256 remainingTime = (buybackMultiplierTriggeredAt + buybackMultiplierLength) - block.timestamp;
+            uint256 feeIncrease = ((totalFee * buybackMultiplierNumerator) / buybackMultiplierDenominator) - totalFee;
+            return totalFee + ((feeIncrease * remainingTime) / buybackMultiplierLength);
         }
         return totalFee;
     }
 
     function takeFee(address sender, address receiver, uint256 amount) internal returns (uint256) {
-        uint256 feeAmount = amount.mul(getTotalFee(receiver == pair)).div(feeDenominator);
+        uint256 feeAmount = (amount * getTotalFee(receiver == pair)) / feeDenominator;
 
-        _balances[address(this)] = _balances[address(this)].add(feeAmount);
+        _balances[address(this)] += feeAmount;
         emit Transfer(sender, address(this), feeAmount);
 
-        return amount.sub(feeAmount);
+        return amount - feeAmount;
     }
 
     function shouldSwapBack() internal view returns (bool) {
@@ -209,8 +212,8 @@ contract Token is IBEP20, Auth {
 
     function swapBack() internal swapping {
         uint256 dynamicLiquidityFee = isOverLiquified(targetLiquidity, targetLiquidityDenominator) ? 0 : liquidityFee;
-        uint256 amountToLiquify = swapThreshold.mul(dynamicLiquidityFee).div(totalFee).div(2);
-        uint256 amountToSwap = swapThreshold.sub(amountToLiquify);
+        uint256 amountToLiquify = ((swapThreshold * dynamicLiquidityFee) / totalFee) / 2;
+        uint256 amountToSwap = swapThreshold - amountToLiquify;
 
         address[] memory path = new address[](2);
         path[0] = address(this);
@@ -225,13 +228,13 @@ contract Token is IBEP20, Auth {
             block.timestamp
         );
 
-        uint256 amountBNB = address(this).balance.sub(balanceBefore);
+        uint256 amountBNB = address(this).balance - balanceBefore;
 
-        uint256 totalBNBFee = totalFee.sub(dynamicLiquidityFee.div(2));
+        uint256 totalBNBFee = totalFee - (dynamicLiquidityFee / 2);
 
-        uint256 amountBNBLiquidity = amountBNB.mul(dynamicLiquidityFee).div(totalBNBFee).div(2);
-        uint256 amountBNBReflection = amountBNB.mul(reflectionFee).div(totalBNBFee);
-        uint256 amountBNBMarketing = amountBNB.mul(marketingFee).div(totalBNBFee);
+        uint256 amountBNBLiquidity = ((amountBNB * dynamicLiquidityFee) / totalBNBFee) / 2;
+        uint256 amountBNBReflection = (amountBNB * reflectionFee) / totalBNBFee;
+        uint256 amountBNBMarketing = (amountBNB / marketingFee) / totalBNBFee;
 
         try distributor.deposit{value: amountBNBReflection}() {} catch {}
         payable(marketingFeeReceiver).transfer(amountBNBMarketing);
@@ -274,7 +277,7 @@ contract Token is IBEP20, Auth {
     function triggerAutoBuyback() internal {
         buyTokens(autoBuybackAmount, DEAD);
         autoBuybackBlockLast = block.number;
-        autoBuybackAccumulator = autoBuybackAccumulator.add(autoBuybackAmount);
+        autoBuybackAccumulator += autoBuybackAmount;
         if(autoBuybackAccumulator > autoBuybackCap){ autoBuybackEnabled = false; }
     }
 
@@ -345,7 +348,7 @@ contract Token is IBEP20, Auth {
         buybackFee = _buybackFee;
         reflectionFee = _reflectionFee;
         marketingFee = _marketingFee;
-        totalFee = _liquidityFee.add(_buybackFee).add(_reflectionFee).add(_marketingFee);
+        totalFee = _liquidityFee + _buybackFee + _reflectionFee + _marketingFee;
         feeDenominator = _feeDenominator;
         require(totalFee < feeDenominator/4);
     }
@@ -383,11 +386,11 @@ contract Token is IBEP20, Auth {
     }
 
     function getCirculatingSupply() public view returns (uint256) {
-        return _totalSupply.sub(balanceOf(DEAD)).sub(balanceOf(ZERO));
+        return (_totalSupply - balanceOf(DEAD)) - balanceOf(ZERO);
     }
 
     function getLiquidityBacking(uint256 accuracy) public view returns (uint256) {
-        return accuracy.mul(balanceOf(pair).mul(2)).div(getCirculatingSupply());
+        return (accuracy * (balanceOf(pair) * 2)) / getCirculatingSupply();
     }
 
     function isOverLiquified(uint256 target, uint256 accuracy) public view returns (bool) {

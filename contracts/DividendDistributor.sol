@@ -2,11 +2,11 @@
 pragma solidity ^0.8.11;
 
 import "./IDEXRouter.sol";
-import "./SafeMath.sol";
+//import "./SafeMath.sol";
 import "./IDividendDistributor.sol";
 
 contract DividendDistributor is IDividendDistributor {
-    using SafeMath for uint256;
+    //using SafeMath for uint256;
 
     address _token;
 
@@ -23,7 +23,6 @@ contract DividendDistributor is IDividendDistributor {
         uint32 Slice2;
     }
 
-    //IBEP20 BUSD = IBEP20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
     address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
     IDEXRouter router;
 
@@ -86,7 +85,7 @@ contract DividendDistributor is IDividendDistributor {
             removeShareholder(shareholder);
         }
 
-        totalShares = totalShares.sub(shares[shareholder].amount).add(amount);
+        totalShares = (totalShares - shares[shareholder].amount) + amount;
         shares[shareholder].amount = amount;
         shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
     }
@@ -111,7 +110,7 @@ contract DividendDistributor is IDividendDistributor {
 
         //totalDividends += totalDividends.add(amount);
         totalDividends += amount;
-        dividendsPerShare = dividendsPerShare.add(dividendsPerShareAccuracyFactor.mul(amount).div(totalShares));
+        dividendsPerShare += (dividendsPerShareAccuracyFactor * amount) / totalShares;
     }
 
     function process(uint256 gas) external override onlyToken {
@@ -133,7 +132,7 @@ contract DividendDistributor is IDividendDistributor {
                 distributeDividend(shareholders[currentIndex]);
             }
 
-            gasUsed = gasUsed.add(gasLeft.sub(gasleft()));
+            gasUsed += gasLeft - gasleft();
             gasLeft = gasleft();
             currentIndex++;
             iterations++;
@@ -160,12 +159,7 @@ contract DividendDistributor is IDividendDistributor {
                     shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
                 }*/
                 //else {
-                    if(_swapBNBforChosenTokenandPayout(amount,PayoutTokenContract,shareholder)) {
-                        totalDistributed = totalDistributed.add(amount);
-                        shareholderClaims[shareholder] = block.timestamp;
-                        shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
-                        shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
-                    }
+                    require(_swapBNBforChosenTokenandPayout(amount,PayoutTokenContract,shareholder));
                 //}
             }
             else {
@@ -192,16 +186,16 @@ contract DividendDistributor is IDividendDistributor {
                         if(BNBslice>amount)
                             BNBslice = amount; //safety check
                         PayoutTokenContract = PayoutTokenList[tokennumbers[i]];
-                        if(_swapBNBforChosenTokenandPayout(BNBslice,PayoutTokenContract,shareholder)) { 
+                        require(_swapBNBforChosenTokenandPayout(BNBslice,PayoutTokenContract,shareholder)); //{ 
                             amount -= BNBslice;
-                        }
+                        //}
                     }
                 }
-                totalDistributed = totalDistributed.add(amount);
-                shareholderClaims[shareholder] = block.timestamp;
-                shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
-                shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
             }
+            totalDistributed += amount;
+            shareholderClaims[shareholder] = block.timestamp;
+            shares[shareholder].totalRealised += amount;
+            shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
         }
     }
 
@@ -233,11 +227,11 @@ contract DividendDistributor is IDividendDistributor {
 
         if(shareholderTotalDividends <= shareholderTotalExcluded){ return 0; }
 
-        return shareholderTotalDividends.sub(shareholderTotalExcluded);
+        return (shareholderTotalDividends - shareholderTotalExcluded);
     }
 
     function getCumulativeDividends(uint256 share) internal view returns (uint256) {
-        return share.mul(dividendsPerShare).div(dividendsPerShareAccuracyFactor);
+        return (share * dividendsPerShare) / dividendsPerShareAccuracyFactor;
     }
 
     function _AddTokentoPayoutList(address TokenAddress, string memory Name) private {
