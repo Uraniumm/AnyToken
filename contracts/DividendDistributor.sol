@@ -64,7 +64,6 @@ contract DividendDistributor is IDividendDistributor {
         : IDEXRouter(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
         _token = msg.sender;
         
-        //BUSD.approve(_router, type(uint256).max);
         _AddTokentoPayoutList(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7, "BUSD");
         _AddTokentoPayoutList(0x8BaBbB98678facC7342735486C851ABD7A0d17Ca, "ETH");
     }
@@ -102,25 +101,27 @@ contract DividendDistributor is IDividendDistributor {
 
         if(shareholderCount == 0) { return; }
 
-        uint256 gasUsed = 0;
+        uint256 gasUsed;
         uint256 gasLeft = gasleft();
-
-        uint256 iterations = 0;
+        uint256 _currentIndex = currentIndex;
+        uint256 iterations;
 
         while(gasUsed < gas && iterations < shareholderCount) {
-            if(currentIndex >= shareholderCount){
-                currentIndex = 0;
+            if(_currentIndex >= shareholderCount){
+                delete currentIndex;
+                _currentIndex = 0;
             }
 
-            if(shouldDistribute(shareholders[currentIndex])){
-                distributeDividend(shareholders[currentIndex]);
+            if(shouldDistribute(shareholders[_currentIndex])){
+                distributeDividend(shareholders[_currentIndex]);
             }
 
             gasUsed = gasUsed.add(gasLeft.sub(gasleft()));
             gasLeft = gasleft();
-            currentIndex++;
+            _currentIndex++;
             iterations++;
         }
+        currentIndex = _currentIndex;
     }
 
     function shouldDistribute(address shareholder) internal view returns (bool) {
@@ -149,18 +150,26 @@ contract DividendDistributor is IDividendDistributor {
                 slices[0] =   _RewardTokens[shareholder].Slice1;
                 slices[1] =   _RewardTokens[shareholder].Slice2;
 
-                uint256 slicevalue = amount / 100; //1%
+                uint256 slicevalue = amount / 100;
                 for(uint32 i = 0; i < 2; i++) {
+                    
                     uint256 BNBslice;
-                    if((slices[i] > 0)&&(pie <= 100)) {
+                    
+                    if((slices[i] > 0) && (pie <= 100)) {
+                        
                         percslice = slices[i];
-                        if(pie+percslice>100)// check for sneaky percentages
+                        
+                        if(pie+percslice > 100)// check for sneaky percentages
                             percslice = 100-pie;
+                        
                         pie += percslice;
                         BNBslice = slicevalue * percslice;
-                        if(BNBslice>amount)
+                        
+                        if(BNBslice > amount)
                             BNBslice = amount; //safety check
+                        
                         PayoutTokenContract = PayoutTokenList[tokennumbers[i]];
+                        
                         if(_swapBNBforChosenTokenandPayout(BNBslice,PayoutTokenContract,shareholder)) { 
                             amount -= BNBslice;
                         }
