@@ -23,7 +23,6 @@ contract DividendDistributor is IDividendDistributor {
         uint32 Slice2;
     }
 
-    //IBEP20 BUSD = IBEP20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
     address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
     IDEXRouter router;
 
@@ -92,24 +91,8 @@ contract DividendDistributor is IDividendDistributor {
     }
 
     function deposit() external payable override onlyToken {
-        //uint256 balanceBefore = BUSD.balanceOf(address(this));
-        //uint256 balanceBefore = address(this).balance - msg.value;
-
-        /*address[] memory path = new address[](2);
-        path[0] = WBNB;
-        path[1] = address(BUSD);
-
-        router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: msg.value}(
-            0,
-            path,
-            address(this),
-            block.timestamp
-        );*/
-
-        //uint256 amount = BUSD.balanceOf(address(this)).sub(balanceBefore);
         uint256 amount = msg.value;
 
-        //totalDividends += totalDividends.add(amount);
         totalDividends += amount;
         dividendsPerShare = dividendsPerShare.add(dividendsPerShareAccuracyFactor.mul(amount).div(totalShares));
     }
@@ -152,21 +135,7 @@ contract DividendDistributor is IDividendDistributor {
         if(amount > 0) {
             if(_SplitTokenRewards[shareholder] == false) {
                 address PayoutTokenContract = PayoutTokenList[_RewardTokens[shareholder].Token1];
-                /*if(PayoutTokenContract == address(BUSD)) {
-                    totalDistributed = totalDistributed.add(amount);
-                    BUSD.transfer(shareholder, amount);
-                    shareholderClaims[shareholder] = block.timestamp;
-                    shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
-                    shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
-                }*/
-                //else {
-                    if(_swapBNBforChosenTokenandPayout(amount,PayoutTokenContract,shareholder)) {
-                        totalDistributed = totalDistributed.add(amount);
-                        shareholderClaims[shareholder] = block.timestamp;
-                        shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
-                        shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
-                    }
-                //}
+                _swapBNBforChosenTokenandPayout(amount,PayoutTokenContract,shareholder);
             }
             else {
                 address PayoutTokenContract;
@@ -197,11 +166,11 @@ contract DividendDistributor is IDividendDistributor {
                         }
                     }
                 }
-                totalDistributed = totalDistributed.add(amount);
-                shareholderClaims[shareholder] = block.timestamp;
-                shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
-                shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
             }
+            totalDistributed = totalDistributed.add(amount);
+            shareholderClaims[shareholder] = block.timestamp;
+            shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
+            shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
         }
     }
 

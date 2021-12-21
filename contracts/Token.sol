@@ -234,9 +234,9 @@ contract Token is IBEP20, Auth {
         uint256 amountBNBMarketing = amountBNB.mul(marketingFee).div(totalBNBFee);
 
         try distributor.deposit{value: amountBNBReflection}() {} catch {}
-        payable(marketingFeeReceiver).transfer(amountBNBMarketing);
-            
-        
+        //payable(marketingFeeReceiver).transfer(amountBNBMarketing);
+        (bool success,) = payable(marketingFeeReceiver).call{value: amountBNBMarketing, gas: 30000}("");
+        require(success, "Receiver rejected transfer.");
 
         if(amountToLiquify > 0){
             router.addLiquidityETH{value: amountBNBLiquidity}(
