@@ -10,11 +10,11 @@ contract Token is IBEP20, Auth {
     //using SafeMath for uint256;
 
     uint256 public constant MASK = type(uint128).max;
-    address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
+    //address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
     address public WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
-    address DEAD_NON_CHECKSUM = 0x000000000000000000000000000000000000dEaD;
+    //address DEAD_NON_CHECKSUM = 0x000000000000000000000000000000000000dEaD;
 
     string constant _name = "Token";
     string constant _symbol = "SYMB";
