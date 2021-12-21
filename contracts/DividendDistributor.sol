@@ -1,239 +1,12 @@
-// SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.10;
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.11;
 
-library Address {
-    function isContract(address account) internal view returns (bool) {
-        bytes32 codehash;
-        bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-        assembly { codehash := extcodehash(account) }
-        return (codehash != accountHash && codehash != 0x0);
-    }
-    function sendValue(address payable recipient, uint256 amount) internal {
-        require(address(this).balance >= amount, "Address: insufficient balance");
-
-        // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success, ) = recipient.call{ value: amount }("");
-        require(success, "Address: unable to send value, recipient may have reverted");
-    }
-    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-      return functionCall(target, data, "Address: low-level call failed");
-    }
-    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
-        return _functionCallWithValue(target, data, 0, errorMessage);
-    }
-    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
-    }
-    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {
-        require(address(this).balance >= value, "Address: insufficient balance for call");
-        return _functionCallWithValue(target, data, value, errorMessage);
-    }
-
-    function _functionCallWithValue(address target, bytes memory data, uint256 weiValue, string memory errorMessage) private returns (bytes memory) {
-        require(isContract(target), "Address: call to non-contract");
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{ value: weiValue }(data);
-        if (success) {
-            return returndata;
-        } else {
-            // Look for revert reason and bubble it up if present
-            if (returndata.length > 0) {
-                // The easiest way to bubble the revert reason is using memory via assembly
-
-                // solhint-disable-next-line no-inline-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert(errorMessage);
-            }
-        }
-    }
-}
-
-abstract contract Context {
-    function _msgSender() internal view returns (address payable) {
-        return payable(msg.sender);
-    }
-
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-
-
-/**
- * Standard SafeMath, stripped down to just add/sub/mul/div
-
-library SafeMath {
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, "SafeMath: subtraction overflow");
-    }
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b <= a, errorMessage);
-        uint256 c = a - b;
-
-        return c;
-    }
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
-        return c;
-    }
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "SafeMath: division by zero");
-    }
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        // Solidity only automatically asserts when dividing by 0
-        require(b > 0, errorMessage);
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-
-        return c;
-    }
-}
- */
-
-interface IERC20 {
-
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-    }
-contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    constructor () {
-        address msgSender = _msgSender();
-        _owner = msgSender;
-        emit OwnershipTransferred(address(0), msgSender);
-    }
-    function owner() public view returns (address) {
-        return _owner;
-    }
-    modifier onlyOwner() {
-        require(_owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-    function renounceOwnership() public virtual onlyOwner {
-        emit OwnershipTransferred(_owner, address(0));
-        _owner = address(0);
-    }
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-contract Manageable is Context {
-    address private _manager;
-    event ManagementTransferred(address indexed previousManager, address indexed newManager);
-    constructor(){
-        address msgSender = _msgSender();
-        _manager = msgSender;
-        emit ManagementTransferred(address(0), msgSender);
-    }
-    function manager() public view returns(address){ return _manager; }
-    modifier onlyManager(){
-        require(_manager == _msgSender(), "Manageable: caller is not the manager");
-        _;
-    }
-    function transferManagement(address newManager) external virtual onlyManager {
-        emit ManagementTransferred(_manager, newManager);
-        _manager = newManager;
-    }
-}
-interface IDEXFactory {
-    function createPair(address tokenA, address tokenB) external returns (address pair);
-}
-
-interface IDEXRouter {
-    function factory() external pure returns (address);
-    function WETH() external pure returns (address);
-
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint amountADesired,
-        uint amountBDesired,
-        uint amountAMin,
-        uint amountBMin,
-        address to,
-        uint deadline
-    ) external returns (uint amountA, uint amountB, uint liquidity);
-
-    function addLiquidityETH(
-        address token,
-        uint amountTokenDesired,
-        uint amountTokenMin,
-        uint amountETHMin,
-        address to,
-        uint deadline
-    ) external payable returns (uint amountToken, uint amountETH, uint liquidity);
-
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external;
-
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external payable;
-
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) external;
-}
-
-interface IDividendDistributor {
-    function setDistributionCriteria(uint256 _minPeriod, uint256 _minDistribution) external;
-    function updateDistRouter(address _nRouter) external;
-    function setShare(address shareholder, uint256 amount) external;
-    function deposit(uint256 balanceBefore) external payable;
-    //function deposit(uint256 balanceBefore, uint256 amountBNBReflection) external payable;
-    function process(uint256 gas) external;
-    function getRewardType(address shareholder) external view returns (uint256);
-    function getRewardAddress(address shareholder) external view returns (address);
-    function editRewardTokens(address token, bool remove) external;
-    function setRewardToken(address shareholder, uint256 token) external;
-    function getDistBal() external view returns (uint256);
-    function getTotalShares() external view returns (uint256);
-    function getDividends() external view returns (uint256);
-}
+import "./IDEXRouter.sol";
+import "./SafeMath.sol";
+import "./IDividendDistributor.sol";
 
 contract DividendDistributor is IDividendDistributor {
-    //using SafeMath for uint256;
+    using SafeMath for uint256;
 
     address _token;
 
@@ -241,22 +14,29 @@ contract DividendDistributor is IDividendDistributor {
         uint256 amount;
         uint256 totalExcluded;
         uint256 totalRealised;
-        uint256 rewardType;
     }
 
-    // IERC20 BUSD = IERC20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
+    struct RewardTokens{
+        uint32 Token1;
+        uint32 Token2;
+        uint32 Slice1;
+        uint32 Slice2;
+    }
+
+    //IBEP20 BUSD = IBEP20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
     address WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
     IDEXRouter router;
 
     address[] shareholders;
+    address[] public PayoutTokenList;
+    string[] public PayoutTokenListNames;
     mapping (address => uint256) shareholderIndexes;
     mapping (address => uint256) shareholderClaims;
-
-    address[] rewardTokens;
-    mapping (address => uint256) rewardTokenIndexes;
-    uint256 internal balance;
+    mapping (address => RewardTokens) public _RewardTokens;
+    mapping (address => bool) private _SplitTokenRewards;
     mapping (address => Share) public shares;
 
+    uint32 public NumberofPayoutTokens;
     uint256 public totalShares;
     uint256 public totalDividends;
     uint256 public totalDistributed;
@@ -279,34 +59,20 @@ contract DividendDistributor is IDividendDistributor {
         require(msg.sender == _token); _;
     }
 
-    constructor (address _router, address token) {
+    constructor (address _router) {
         router = _router != address(0)
-            ? IDEXRouter(_router)
-            : IDEXRouter(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
-        _token = token;
-        addRewardToken(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
+        ? IDEXRouter(_router)
+        : IDEXRouter(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
+        _token = msg.sender;
+        
+        //BUSD.approve(_router, type(uint256).max);
+        _AddTokentoPayoutList(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7, "BUSD");
+        _AddTokentoPayoutList(0x8BaBbB98678facC7342735486C851ABD7A0d17Ca, "ETH");
     }
 
     function setDistributionCriteria(uint256 _minPeriod, uint256 _minDistribution) external override onlyToken {
         minPeriod = _minPeriod;
         minDistribution = _minDistribution;
-    }
-
-    function updateDistRouter(address _nRouter) external override onlyToken {
-        IDEXRouter _newRouter = IDEXRouter(_nRouter);
-        router = _newRouter;
-    }
-
-    function editRewardTokens(address token, bool remove) external override onlyToken {
-        if(remove){
-            removeRewardToken(token);
-        }
-        else
-            addRewardToken(token);
-    }
-
-    function setRewardToken(address shareholder, uint256 token) external override onlyToken {
-        shares[shareholder].rewardType = token;
     }
 
     function setShare(address shareholder, uint256 amount) external override onlyToken {
@@ -320,31 +86,14 @@ contract DividendDistributor is IDividendDistributor {
             removeShareholder(shareholder);
         }
 
-        totalShares =((totalShares - shares[shareholder].amount) + amount);
+        totalShares = totalShares.sub(shares[shareholder].amount).add(amount);
         shares[shareholder].amount = amount;
         shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
     }
-    
-    /*event Receive(uint256 value);
-    receive() external payable {
-        emit Receive(msg.value);
-        balance += msg.value;
-        totalDividends += msg.value;
-        dividendsPerShare += ((dividendsPerShareAccuracyFactor * msg.value) / totalShares);
-    }
 
-    //fallback() external payable {}
-
-    /*function deposit(uint256 balanceBefore, uint256 amountBNBReflection) external payable override onlyToken {
-
-        uint256 amount = (amountBNBReflection - balanceBefore);
-    
-        totalDividends += amount;
-        dividendsPerShare = (dividendsPerShare + ((dividendsPerShareAccuracyFactor * amount) / totalShares));
-    }*/
-    
-    function deposit(uint256 balanceBefore) external payable override onlyToken {
-        //uint256 balanceBefore = (address(this).balance - msg.value);
+    function deposit() external payable override onlyToken {
+        //uint256 balanceBefore = BUSD.balanceOf(address(this));
+        //uint256 balanceBefore = address(this).balance - msg.value;
 
         /*address[] memory path = new address[](2);
         path[0] = WBNB;
@@ -357,22 +106,12 @@ contract DividendDistributor is IDividendDistributor {
             block.timestamp
         );*/
 
-        uint256 amount = (address(this).balance - (balanceBefore));
+        //uint256 amount = BUSD.balanceOf(address(this)).sub(balanceBefore);
+        uint256 amount = msg.value;
 
+        //totalDividends += totalDividends.add(amount);
         totalDividends += amount;
-        dividendsPerShare = (dividendsPerShare + ((dividendsPerShareAccuracyFactor * amount) / totalShares));
-    }
-
-    function getDistBal() external view override onlyToken returns (uint256) {
-        return address(this).balance;
-    }
-
-    function getTotalShares() external view override onlyToken returns (uint256) {
-        return totalShares;
-    }
-
-    function getDividends() external view override onlyToken returns (uint256) {
-        return dividendsPerShare;
+        dividendsPerShare = dividendsPerShare.add(dividendsPerShareAccuracyFactor.mul(amount).div(totalShares));
     }
 
     function process(uint256 gas) external override onlyToken {
@@ -394,7 +133,7 @@ contract DividendDistributor is IDividendDistributor {
                 distributeDividend(shareholders[currentIndex]);
             }
 
-            gasUsed = (gasUsed + (gasLeft - gasleft()));
+            gasUsed = gasUsed.add(gasLeft.sub(gasleft()));
             gasLeft = gasleft();
             currentIndex++;
             iterations++;
@@ -403,45 +142,87 @@ contract DividendDistributor is IDividendDistributor {
 
     function shouldDistribute(address shareholder) internal view returns (bool) {
         return shareholderClaims[shareholder] + minPeriod < block.timestamp
-                && getUnpaidEarnings(shareholder) > minDistribution;
+        && getUnpaidEarnings(shareholder) > minDistribution;
     }
 
     function distributeDividend(address shareholder) internal {
         if(shares[shareholder].amount == 0){ return; }
 
         uint256 amount = getUnpaidEarnings(shareholder);
-        if(amount > 0){
-            totalDistributed = (totalDistributed + (amount));
-            //BUSD.transfer(shareholder, amount);
-            address tokenToReflect = rewardTokens[shares[shareholder].rewardType];
-            _swapBNBforChosenTokenandPayout(amount, tokenToReflect, shareholder);
-            shareholderClaims[shareholder] = block.timestamp;
-            shares[shareholder].totalRealised = (shares[shareholder].totalRealised + (amount));
-            shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
+        if(amount > 0) {
+            if(_SplitTokenRewards[shareholder] == false) {
+                address PayoutTokenContract = PayoutTokenList[_RewardTokens[shareholder].Token1];
+                /*if(PayoutTokenContract == address(BUSD)) {
+                    totalDistributed = totalDistributed.add(amount);
+                    BUSD.transfer(shareholder, amount);
+                    shareholderClaims[shareholder] = block.timestamp;
+                    shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
+                    shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
+                }*/
+                //else {
+                    if(_swapBNBforChosenTokenandPayout(amount,PayoutTokenContract,shareholder)) {
+                        totalDistributed = totalDistributed.add(amount);
+                        shareholderClaims[shareholder] = block.timestamp;
+                        shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
+                        shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
+                    }
+                //}
+            }
+            else {
+                address PayoutTokenContract;
+                uint32 pie;
+                uint32 percslice;
+                uint32[2] memory tokennumbers;
+                uint32[2] memory slices;
+
+                tokennumbers[0] =   _RewardTokens[shareholder].Token1;
+                tokennumbers[1] =   _RewardTokens[shareholder].Token2;
+                slices[0] =   _RewardTokens[shareholder].Slice1;
+                slices[1] =   _RewardTokens[shareholder].Slice2;
+
+                uint256 slicevalue = amount / 100; //1%
+                for(uint32 i = 0; i < 2; i++) {
+                    uint256 BNBslice;
+                    if((slices[i] > 0)&&(pie <= 100)) {
+                        percslice = slices[i];
+                        if(pie+percslice>100)// check for sneaky percentages
+                            percslice = 100-pie;
+                        pie += percslice;
+                        BNBslice = slicevalue * percslice;
+                        if(BNBslice>amount)
+                            BNBslice = amount; //safety check
+                        PayoutTokenContract = PayoutTokenList[tokennumbers[i]];
+                        if(_swapBNBforChosenTokenandPayout(BNBslice,PayoutTokenContract,shareholder)) { 
+                            amount -= BNBslice;
+                        }
+                    }
+                }
+                totalDistributed = totalDistributed.add(amount);
+                shareholderClaims[shareholder] = block.timestamp;
+                shares[shareholder].totalRealised = shares[shareholder].totalRealised.add(amount);
+                shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
+            }
         }
     }
 
-    function _swapBNBforChosenTokenandPayout(uint256 amountBNB, address PayoutTokenContract, address receiver) private returns (bool){
+    function claimDividend() external {
+        distributeDividend(msg.sender);
+    }
 
+    function _swapBNBforChosenTokenandPayout(uint256 amountBNB,address PayoutTokenContract, address shareholder) private returns (bool) {
         address[] memory path = new address[](2);
         path[0] = WBNB;
         path[1] = PayoutTokenContract;
 
-        try router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amountBNB}(
+    try router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amountBNB}(
             0,
             path,
-            address(receiver),
+            address(shareholder),
             block.timestamp
         )
         {return true;}
         catch {}
-   
-     
-     return false;
-    }   
-
-    function claimDividend() external {
-        distributeDividend(msg.sender);
+        return false;
     }
 
     function getUnpaidEarnings(address shareholder) public view returns (uint256) {
@@ -452,40 +233,88 @@ contract DividendDistributor is IDividendDistributor {
 
         if(shareholderTotalDividends <= shareholderTotalExcluded){ return 0; }
 
-        return (shareholderTotalDividends - shareholderTotalExcluded);
+        return shareholderTotalDividends.sub(shareholderTotalExcluded);
     }
 
     function getCumulativeDividends(uint256 share) internal view returns (uint256) {
-        return ((share * dividendsPerShare) / dividendsPerShareAccuracyFactor);
+        return share.mul(dividendsPerShare).div(dividendsPerShareAccuracyFactor);
     }
 
-    function getRewardType(address shareholder) external view override onlyToken returns (uint256){
-        return shares[shareholder].rewardType;
+    function _AddTokentoPayoutList(address TokenAddress, string memory Name) private {
+        PayoutTokenList.push(TokenAddress);
+        PayoutTokenListNames.push(Name);
+        NumberofPayoutTokens++;
     }
 
-    function getRewardAddress(address shareholder) external view override onlyToken returns (address){
-        return rewardTokens[shares[shareholder].rewardType];
+    function AddTokentoPayoutList(address TokenAddress, string memory Name) external override onlyToken {
+        _AddTokentoPayoutList(TokenAddress, Name);
+    }
+
+    function EditPayoutList(uint32 pos, address TokenAddress, string memory Name) external override onlyToken {
+        require(pos < NumberofPayoutTokens);
+        PayoutTokenList[pos] = TokenAddress;
+        PayoutTokenListNames[pos] = Name;
+    }
+
+    function ShowMyRewardTOKENS() public view returns (uint32[2] memory tokennumbers){
+        tokennumbers[0] =   _RewardTokens[msg.sender].Token1;
+        tokennumbers[1] =   _RewardTokens[msg.sender].Token2;
+    
+        return (tokennumbers);
+    }
+    
+    //returns the names of all payout tokens    
+    function ShowAllRewardTokens() public view returns (string[] memory Rewards){ 
+        return PayoutTokenListNames;
+    }
+
+    //returns the percentage payout settings of the caller
+    function ShowMyRewardSLICES() public view returns (uint32[2] memory slices){
+        slices[0] =   _RewardTokens[msg.sender].Slice1; //percentage
+        slices[1] =   _RewardTokens[msg.sender].Slice2;
+    
+        return (slices);
+    }    
+
+    function ChooseSinglePayoutToken(uint32 PayoutTokenNumber) public {
+        require(PayoutTokenNumber < NumberofPayoutTokens);
+        _RewardTokens[msg.sender].Token1 = PayoutTokenNumber;
+        _RewardTokens[msg.sender].Slice1 = 100;
+        _SplitTokenRewards[msg.sender] = false;
+    }
+
+    //token numbers + percentage slice
+    function ChooseMultiplePayoutTokens(uint32 Token1,uint32 Slice1,uint32 Token2,uint32 Slice2) public {
+       
+        uint32 Whole = Slice1+Slice2;
+        require(Whole > 0);
+       
+        uint32 N = uint32(NumberofPayoutTokens);
+        bool OutofBounds = ((Token1 >= N)||(Token2 >= N));
+        require(OutofBounds == false);
+
+        _RewardTokens[msg.sender].Token1 = Token1;
+        _RewardTokens[msg.sender].Token2 = Token2;
+        _RewardTokens[msg.sender].Slice1 = Slice1;
+        _RewardTokens[msg.sender].Slice2 = Slice2;
+        
+        _SplitTokenRewards[msg.sender] = true;
     }
 
     function addShareholder(address shareholder) internal {
         shareholderIndexes[shareholder] = shareholders.length;
         shareholders.push(shareholder);
+
+        _SplitTokenRewards[shareholder] = false;
+        _RewardTokens[shareholder].Slice1 = 100;
+        _RewardTokens[shareholder].Slice2 = 0;
+        _RewardTokens[shareholder].Token1 = 0;
+        _RewardTokens[shareholder].Token2 = 1;
     }
 
     function removeShareholder(address shareholder) internal {
         shareholders[shareholderIndexes[shareholder]] = shareholders[shareholders.length-1];
         shareholderIndexes[shareholders[shareholders.length-1]] = shareholderIndexes[shareholder];
         shareholders.pop();
-    }
-    
-    function addRewardToken(address rewardToken) internal {
-        rewardTokenIndexes[rewardToken] = rewardTokens.length;
-        rewardTokens.push(rewardToken);
-    }
-
-    function removeRewardToken(address rewardToken) internal {
-        rewardTokens[rewardTokenIndexes[rewardToken]] = rewardTokens[rewardTokens.length-1];
-        rewardTokenIndexes[rewardTokens[rewardTokens.length-1]] = rewardTokenIndexes[rewardToken];
-        rewardTokens.pop();
     }
 }
