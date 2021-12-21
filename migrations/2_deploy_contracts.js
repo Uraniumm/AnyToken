@@ -1,11 +1,11 @@
 const DividendDistributor = artifacts.require("DividendDistributor");
-const NightlyToken = artifacts.require("NightlyToken");
-const router = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+const Token = artifacts.require("Token");
+const router = "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3";
  
 module.exports = function (deployer) {
-  deployer.deploy(NightlyToken, router).then(async () => {
+  deployer.deploy(Token, router).then(async () => {
     // get instance of deployed Favourite contract
-    const nToken = await NightlyToken.deployed();
+    const nToken = await Token.deployed();
     // deploy and pass arguments
     await deployer.deploy(DividendDistributor, router, nToken.address);
     // get instance of deployed Vote contract
