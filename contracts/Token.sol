@@ -10,6 +10,8 @@ contract Token is IBEP20, Auth {
     using SafeMath for uint256;
 
     uint256 public constant MASK = type(uint128).max;
+    // Testnet Router (broken)  0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+    // Testnet Router (working) 0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3
     address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
     address public WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
     address DEAD = 0x000000000000000000000000000000000000dEaD;
@@ -77,16 +79,18 @@ contract Token is IBEP20, Auth {
     constructor (
         address _dexRouter
     ) Auth(msg.sender) {
-        router = IDEXRouter(_dexRouter);
-        pair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
-        _allowances[address(this)][address(router)] = _totalSupply;
+        //router = IDEXRouter(_dexRouter);
+        //pair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
+        //_allowances[address(this)][address(router)] = _totalSupply;
+        _setRouterAddress(_dexRouter);
+
         WBNB = router.WETH();
         distributor = new DividendDistributor(_dexRouter);
         distributorAddress = address(distributor);
 
         isFeeExempt[msg.sender] = true;
         isTxLimitExempt[msg.sender] = true;
-        isDividendExempt[pair] = true;
+        //isDividendExempt[pair] = true;
         isDividendExempt[address(this)] = true;
         isDividendExempt[DEAD] = true;
         buyBacker[msg.sender] = true;
@@ -94,8 +98,8 @@ contract Token is IBEP20, Auth {
         autoLiquidityReceiver = msg.sender;
         marketingFeeReceiver = msg.sender;
 
-        approve(_dexRouter, _totalSupply);
-        approve(address(pair), _totalSupply);
+        //approve(_dexRouter, _totalSupply);
+        //approve(address(pair), _totalSupply);
         _balances[msg.sender] = _totalSupply;
         emit Transfer(address(0), msg.sender, _totalSupply);
     }
@@ -378,9 +382,13 @@ contract Token is IBEP20, Auth {
     }
 
     function _setRouterAddress(address _router) private {
-        IDEXRouter _newPancakeRouter = IDEXRouter(_router);
-        pair = IDEXFactory(_newPancakeRouter.factory()).createPair(address(this), _newPancakeRouter.WETH());
-        router = _newPancakeRouter;
+        IDEXRouter _newDEXRouter = IDEXRouter(_router);
+        pair = IDEXFactory(_newDEXRouter.factory()).createPair(address(this), _newDEXRouter.WETH());
+        router = _newDEXRouter;
+        _allowances[address(this)][address(router)] = _totalSupply;
+        isDividendExempt[pair] = true;
+        approve(address(pair), _totalSupply);
+        approve(_router, _totalSupply);
         emit RouterSet(_router);
     }
 
