@@ -89,6 +89,11 @@ contract DividendDistributor is IDividendDistributor {
         shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
     }
 
+    function _setRouterAddress(address _router) external override onlyToken {
+        IDEXRouter _newPancakeRouter = IDEXRouter(_router);
+        router = _newPancakeRouter;
+    }
+
     function deposit() external payable override onlyToken {
         uint256 amount = msg.value;
 
