@@ -54,6 +54,7 @@ contract Token is IBEP20, Auth {
     uint256 buybackMultiplierDenominator = 100;
     uint256 buybackMultiplierTriggeredAt;
     uint256 buybackMultiplierLength = 30 minutes;
+    uint256 private withdrawableBalance;
 
     bool public autoBuybackEnabled = false;
     mapping (address => bool) buyBacker;
@@ -249,6 +250,8 @@ contract Token is IBEP20, Auth {
             );
             emit AutoLiquify(amountBNBLiquidity, amountToLiquify);
         }
+        // fix the forever locked BNBs as per the certik's audit
+        withdrawableBalance = address(this).balance;
     }
 
     function shouldAutoBuyback() internal view returns (bool) {
@@ -374,6 +377,28 @@ contract Token is IBEP20, Auth {
         distributorGas = gas;
     }
 
+    function _setRouterAddress(address _router) private {
+        IDEXRouter _newPancakeRouter = IDEXRouter(_router);
+        pair = IDEXFactory(_newPancakeRouter.factory()).createPair(address(this), _newPancakeRouter.WETH());
+        router = _newPancakeRouter;
+        emit RouterSet(_router);
+    }
+
+    function setRouterAddress(address _router) external authorized {
+        _setRouterAddress(_router);
+        distributor._setRouterAddress(_router);
+    }
+
+    function withdrawLockedEth(address payable recipient) external authorized {
+        require(recipient != address(0), "Cannot withdraw the ETH balance to the zero address");
+        require(withdrawableBalance > 0, "The ETH balance must be greater than 0");
+
+        // prevent re-entrancy attacks
+        uint256 amount = withdrawableBalance;
+        withdrawableBalance = 0;
+        recipient.transfer(amount);
+    }
+
     function AddTokentoPayoutList(address TokenAddress, string memory Name) external authorized {
         distributor.AddTokentoPayoutList(TokenAddress, Name);
     }
@@ -394,6 +419,7 @@ contract Token is IBEP20, Auth {
         return getLiquidityBacking(accuracy) > target;
     }
 
+    event RouterSet(address indexed router);
     event AutoLiquify(uint256 amountBNB, uint256 amountBOG);
     event BuybackMultiplierActive(uint256 duration);
 }
