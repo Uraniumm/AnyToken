@@ -103,9 +103,5 @@ dist
 # TernJS port file
 .tern-port
 .DS_Store
-bin/*
-build/*
-contracts/artifacts/*
-Pancakeswap/artifacts/*
-.vscode/settings.json
+contracts/DeployTest.sol
 contracts/TestnetToken.sol

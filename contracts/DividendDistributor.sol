@@ -73,6 +73,11 @@ contract DividendDistributor is IDividendDistributor {
         minDistribution = _minDistribution;
     }
 
+    function _setRouterAddress(address _router) external override onlyToken {
+        IDEXRouter _newPancakeRouter = IDEXRouter(_router);
+        router = _newPancakeRouter;
+    }
+
     function setShare(address shareholder, uint256 amount) external override onlyToken {
         if(shares[shareholder].amount > 0){
             distributeDividend(shareholder);
@@ -87,11 +92,6 @@ contract DividendDistributor is IDividendDistributor {
         totalShares = totalShares.sub(shares[shareholder].amount).add(amount);
         shares[shareholder].amount = amount;
         shares[shareholder].totalExcluded = getCumulativeDividends(shares[shareholder].amount);
-    }
-
-    function _setRouterAddress(address _router) external override onlyToken {
-        IDEXRouter _newPancakeRouter = IDEXRouter(_router);
-        router = _newPancakeRouter;
     }
 
     function deposit() external payable override onlyToken {

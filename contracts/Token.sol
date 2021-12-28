@@ -10,7 +10,9 @@ contract Token is IBEP20, Auth {
     //using SafeMath for uint256;
 
     uint256 public constant MASK = type(uint128).max;
-    //address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
+    // Testnet Router (broken)  0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+    // Testnet Router (working) 0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3
+    address BUSD = 0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7;
     address public WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
@@ -21,8 +23,10 @@ contract Token is IBEP20, Auth {
     uint8 constant _decimals = 9;
 
     uint256 _totalSupply = 1_000_000_000 * (10 ** _decimals);
-    //uint256 public _maxTxAmount = _totalSupply.div(800); // 0.125%
-    uint256 public _maxTxAmount = _totalSupply;
+    uint256 public _maxTxAmount = _totalSupply.mul(10).div(10**3);
+    uint256 public _maxBalance = _totalSupply.mul(20).div(10**3);
+    //uint256 public _maxTxAmount = _totalSupply;
+    //uint256 public _maxBalance = _totalSupply;
 
     mapping (address => uint256) _balances;
     mapping (address => mapping (address => uint256)) _allowances;
@@ -33,9 +37,9 @@ contract Token is IBEP20, Auth {
 
     uint256 liquidityFee = 200;
     uint256 buybackFee = 0;
-    uint256 reflectionFee = 1000;
-    uint256 marketingFee = 0;
-    uint256 totalFee = 1200;
+    uint256 reflectionFee = 500;
+    uint256 marketingFee = 100;
+    uint256 totalFee = 800;
     uint256 feeDenominator = 10000;
 
     address public autoLiquidityReceiver;
@@ -55,6 +59,7 @@ contract Token is IBEP20, Auth {
     uint256 buybackMultiplierDenominator = 100;
     uint256 buybackMultiplierTriggeredAt;
     uint256 buybackMultiplierLength = 30 minutes;
+    uint256 private withdrawableBalance;
 
     bool public autoBuybackEnabled = false;
     mapping (address => bool) buyBacker;
@@ -77,16 +82,18 @@ contract Token is IBEP20, Auth {
     constructor (
         address _dexRouter
     ) Auth(msg.sender) {
-        router = IDEXRouter(_dexRouter);
-        pair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
-        _allowances[address(this)][address(router)] = _totalSupply;
+        //router = IDEXRouter(_dexRouter);
+        //pair = IDEXFactory(router.factory()).createPair(WBNB, address(this));
+        //_allowances[address(this)][address(router)] = _totalSupply;
+        _setRouterAddress(_dexRouter);
+
         WBNB = router.WETH();
         distributor = new DividendDistributor(_dexRouter);
         distributorAddress = address(distributor);
 
         isFeeExempt[msg.sender] = true;
         isTxLimitExempt[msg.sender] = true;
-        isDividendExempt[pair] = true;
+        //isDividendExempt[pair] = true;
         isDividendExempt[address(this)] = true;
         isDividendExempt[DEAD] = true;
         buyBacker[msg.sender] = true;
@@ -94,8 +101,8 @@ contract Token is IBEP20, Auth {
         autoLiquidityReceiver = msg.sender;
         marketingFeeReceiver = msg.sender;
 
-        approve(_dexRouter, _totalSupply);
-        approve(address(pair), _totalSupply);
+        //approve(_dexRouter, _totalSupply);
+        //approve(address(pair), _totalSupply);
         _balances[msg.sender] = _totalSupply;
         emit Transfer(address(0), msg.sender, _totalSupply);
     }
@@ -149,7 +156,16 @@ contract Token is IBEP20, Auth {
     function _transferFrom(address sender, address recipient, uint256 amount) internal returns (bool) {
         if(inSwap){ return _basicTransfer(sender, recipient, amount); }
 
-        checkTxLimit(sender, amount);
+        //checkTxLimit(sender, amount);
+
+        if (amount > _maxTxAmount && !isTxLimitExempt[sender] && !isTxLimitExempt[recipient]) {
+            revert("Transfer amount exceeds the maxTxAmount.");
+        }
+        if (_maxBalance > 0 && !isTxLimitExempt[sender] && !isTxLimitExempt[recipient] && recipient != pair) {
+            uint256 recipientBalance = balanceOf(recipient);
+            require(recipientBalance + amount <= _maxBalance, "New balance would exceed the _maxBalance");
+        }
+
         //
         if(shouldSwapBack()){ swapBack(); }
         if(shouldAutoBuyback()){ triggerAutoBuyback(); }
@@ -178,12 +194,6 @@ contract Token is IBEP20, Auth {
         _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
         return true;
-    }
-
-
-
-    function checkTxLimit(address sender, uint256 amount) internal view {
-        require(amount <= _maxTxAmount || isTxLimitExempt[sender], "TX Limit Exceeded");
     }
 
     function shouldTakeFee(address sender) internal view returns (bool) {
@@ -265,7 +275,6 @@ contract Token is IBEP20, Auth {
             );
             emit AutoLiquify(amountBNBLiquidity, amountToLiquify);
         }
-
         // fix the forever locked BNBs as per the certik's audit
         withdrawableBalance = address(this).balance;
     }
@@ -336,9 +345,11 @@ contract Token is IBEP20, Auth {
         launchedAtTimestamp = block.timestamp;
     }
 
-    function setTxLimit(uint256 amount) external authorized {
-        require(amount >= _totalSupply / 1000);
-        _maxTxAmount = amount;
+    function setTxLimit(uint256 maxTxn, uint256 maxBal) external authorized {
+        require(maxTxn >= _totalSupply / 1000);
+        require(maxBal >= _totalSupply / 1000);
+        _maxTxAmount = maxTxn;
+        _maxBalance = maxBal;
     }
 
     function setIsDividendExempt(address holder, bool exempt) external authorized {
@@ -391,6 +402,22 @@ contract Token is IBEP20, Auth {
     function setDistributorSettings(uint256 gas) external authorized {
         require(gas < 750000);
         distributorGas = gas;
+    }
+
+    function _setRouterAddress(address _router) private {
+        IDEXRouter _newDEXRouter = IDEXRouter(_router);
+        pair = IDEXFactory(_newDEXRouter.factory()).createPair(address(this), _newDEXRouter.WETH());
+        router = _newDEXRouter;
+        _allowances[address(this)][address(router)] = _totalSupply;
+        isDividendExempt[pair] = true;
+        approve(address(pair), _totalSupply);
+        approve(_router, _totalSupply);
+        emit RouterSet(_router);
+    }
+
+    function setRouterAddress(address _router) external authorized {
+        _setRouterAddress(_router);
+        distributor._setRouterAddress(_router);
     }
 
     function withdrawLockedEth(address payable recipient) external authorized {
