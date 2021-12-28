@@ -23,8 +23,10 @@ contract Token is IBEP20, Auth {
     uint8 constant _decimals = 9;
 
     uint256 _totalSupply = 1_000_000_000 * (10 ** _decimals);
-    //uint256 public _maxTxAmount = _totalSupply.div(800); // 0.125%
-    uint256 public _maxTxAmount = _totalSupply;
+    uint256 public _maxTxAmount = _totalSupply.mul(10).div(10**3);
+    uint256 public _maxBalance = _totalSupply.mul(20).div(10**3);
+    //uint256 public _maxTxAmount = _totalSupply;
+    //uint256 public _maxBalance = _totalSupply;
 
     mapping (address => uint256) _balances;
     mapping (address => mapping (address => uint256)) _allowances;
@@ -35,9 +37,9 @@ contract Token is IBEP20, Auth {
 
     uint256 liquidityFee = 200;
     uint256 buybackFee = 0;
-    uint256 reflectionFee = 1000;
-    uint256 marketingFee = 0;
-    uint256 totalFee = 1200;
+    uint256 reflectionFee = 500;
+    uint256 marketingFee = 100;
+    uint256 totalFee = 800;
     uint256 feeDenominator = 10000;
 
     address public autoLiquidityReceiver;
@@ -140,7 +142,16 @@ contract Token is IBEP20, Auth {
     function _transferFrom(address sender, address recipient, uint256 amount) internal returns (bool) {
         if(inSwap){ return _basicTransfer(sender, recipient, amount); }
 
-        checkTxLimit(sender, amount);
+        //checkTxLimit(sender, amount);
+
+        if (amount > _maxTxAmount && !isTxLimitExempt[sender] && !isTxLimitExempt[recipient]) {
+            revert("Transfer amount exceeds the maxTxAmount.");
+        }
+        if (_maxBalance > 0 && !isTxLimitExempt[sender] && !isTxLimitExempt[recipient] && recipient != pair) {
+            uint256 recipientBalance = balanceOf(recipient);
+            require(recipientBalance + amount <= _maxBalance, "New balance would exceed the _maxBalance");
+        }
+
         //
         if(shouldSwapBack()){ swapBack(); }
         if(shouldAutoBuyback()){ triggerAutoBuyback(); }
@@ -167,12 +178,6 @@ contract Token is IBEP20, Auth {
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
         return true;
-    }
-
-
-
-    function checkTxLimit(address sender, uint256 amount) internal view {
-        require(amount <= _maxTxAmount || isTxLimitExempt[sender], "TX Limit Exceeded");
     }
 
     function shouldTakeFee(address sender) internal view returns (bool) {
@@ -324,9 +329,11 @@ contract Token is IBEP20, Auth {
         launchedAtTimestamp = block.timestamp;
     }
 
-    function setTxLimit(uint256 amount) external authorized {
-        require(amount >= _totalSupply / 1000);
-        _maxTxAmount = amount;
+    function setTxLimit(uint256 maxTxn, uint256 maxBal) external authorized {
+        require(maxTxn >= _totalSupply / 1000);
+        require(maxBal >= _totalSupply / 1000);
+        _maxTxAmount = maxTxn;
+        _maxBalance = maxBal;
     }
 
     function setIsDividendExempt(address holder, bool exempt) external authorized {
